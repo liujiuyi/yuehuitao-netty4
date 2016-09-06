@@ -45,8 +45,6 @@ public class DeviceServerHandler extends ChannelInboundHandlerAdapter {
       // DTU设备端包头yuehuitao
       if (message.startsWith(Utils.str2HexStr("yuehuitao"))) {
         message = message.split("20")[0];
-        // 验证其是DTO，放入map，查询数据库该设备是否存在
-        // TODO mysql
         String key = Utils.hexStr2Str(message);
         Utils.channelMap.put(key, ctx.channel());
         // 打印所有的key

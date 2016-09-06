@@ -24,6 +24,7 @@ import java.util.Map;
 
 import com.yuehuitao.common.CRC16;
 import com.yuehuitao.common.Utils;
+import com.yuehuitao.jdbc.commonDao;
 
 /**
  * 
@@ -50,13 +51,14 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
       if (uri.getPath().equals("/favicon.ico")) {
         return;
       }
-      // http://127.0.0.1:3001/command.action?action=01&index=12&device=yuehuitao0001
+      // http://127.0.0.1:3001/command.action?action=01&index=12&device=yuehuitao0001&order_id=123131231231
       String path = uri.getPath().substring(uri.getPath().indexOf("/") + 1);
       System.out.println("收到的链接=" + path);
       if ("command.action".equals(path)) {
         String action = ""; // 命令类型
         int index = 0;// 第几个门
         String device = "";// 机器标识
+        String order_id = "";// 订单id
         // 解析get请求参数
         QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
         Map<String, List<String>> parame = decoder.parameters();
@@ -69,38 +71,65 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
         if (parame.containsKey("device")) {
           device = parame.get("device").get(0);
         }
+        if (parame.containsKey("order_id")) {
+          order_id = parame.get("order_id").get(0);
+        }
 
         System.out.println("action=" + action);
         System.out.println("index=" + index);
         System.out.println("device=" + device);
+        System.out.println("order_id=" + order_id);
+
+        // 检查是否已经是支付过的订单
+        // if (!"system".equals(order_id) && !new
+        // commonDao().getOrderStatus(order_id)) {
+        // return;
+        // }
         if (!"".equals(action) && index > 0 && !"".equals(device)) {
           // 01 发送开门命令
           if (action.equals("01") && index > 0) {
-            for (String channelKet : Utils.channelMap.keySet()) {
-              // 发送给指定的客户端
-              if (device.equals(channelKet)) {
-                byte[] openMessage = CRC16.OPEN_DATA_ARRAY[index - 1];
-                System.out.println("开始发送消息=" + openMessage);
-                Utils.channelMap.get(channelKet).writeAndFlush(openMessage).addListener(new ChannelFutureListener() {
-                  // 监听发送的结果
-                  public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                      StringBuilder buf = new StringBuilder();
-                      buf.append("发送消息开门成功\r\n");
-                      ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
-                      writeResponse(channel, request, buffer);
-                    } else {
-                      StringBuilder buf = new StringBuilder();
-                      buf.append("发送消息开门失败\r\n");
-                      ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
-                      writeResponse(channel, request, buffer);
+            if (Utils.channelMap.containsKey(device)) {
+              for (String channelKet : Utils.channelMap.keySet()) {
+                // 发送给指定的客户端
+                if (device.equals(channelKet)) {
+                  byte[] openMessage = CRC16.OPEN_DATA_ARRAY[index - 1];
+                  System.out.println("开始发送消息=" + openMessage);
+                  Utils.channelMap.get(channelKet).writeAndFlush(openMessage).addListener(new ChannelFutureListener() {
+                    // 监听发送的结果
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                      if (future.isSuccess()) {
+                        StringBuilder buf = new StringBuilder();
+                        buf.append("发送消息开门成功\r\n");
+                        ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                        writeResponse(channel, request, buffer);
+                      } else {
+                        StringBuilder buf = new StringBuilder();
+                        buf.append("发送消息开门失败\r\n");
+                        ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                        writeResponse(channel, request, buffer);
+                      }
                     }
-                  }
-                });
-                System.out.println("发送的消息：" + openMessage);
+                  });
+                  System.out.println("发送的消息：" + openMessage);
+                }
               }
+            } else {
+              StringBuilder buf = new StringBuilder();
+              buf.append("发送消息开门失败\r\n");
+              ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+              writeResponse(channel, request, buffer);
             }
+          } else {
+            StringBuilder buf = new StringBuilder();
+            buf.append("发送消息开门失败\r\n");
+            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+            writeResponse(channel, request, buffer);
           }
+        } else {
+          StringBuilder buf = new StringBuilder();
+          buf.append("发送消息开门失败\r\n");
+          ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+          writeResponse(channel, request, buffer);
         }
       }
     }
