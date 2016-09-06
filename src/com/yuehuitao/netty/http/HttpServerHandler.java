@@ -22,9 +22,10 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.yuehuitao.common.CRC16;
 import com.yuehuitao.common.Utils;
-import com.yuehuitao.jdbc.commonDao;
 
 /**
  * 
@@ -34,6 +35,7 @@ import com.yuehuitao.jdbc.commonDao;
 
 public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
   private HttpPostRequestDecoder decoder;
+  private static Logger logger = Logger.getLogger(HttpServerHandler.class);
 
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
@@ -47,13 +49,13 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
     if (msg instanceof HttpRequest) {
       final HttpRequest request = (HttpRequest) msg;
       URI uri = new URI(request.getUri());
-      System.out.println("request uri==" + uri.getPath());
+      logger.info("request uri==" + uri.getPath());
       if (uri.getPath().equals("/favicon.ico")) {
         return;
       }
       // http://127.0.0.1:3001/command.action?action=01&index=12&device=yuehuitao0001&order_id=123131231231
       String path = uri.getPath().substring(uri.getPath().indexOf("/") + 1);
-      System.out.println("收到的链接=" + path);
+      logger.info("收到的链接=" + path);
       if ("command.action".equals(path)) {
         String action = ""; // 命令类型
         int index = 0;// 第几个门
@@ -75,10 +77,10 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
           order_id = parame.get("order_id").get(0);
         }
 
-        System.out.println("action=" + action);
-        System.out.println("index=" + index);
-        System.out.println("device=" + device);
-        System.out.println("order_id=" + order_id);
+        logger.info("action=" + action);
+        logger.info("index=" + index);
+        logger.info("device=" + device);
+        logger.info("order_id=" + order_id);
 
         // 检查是否已经是支付过的订单
         // if (!"system".equals(order_id) && !new
@@ -93,7 +95,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
                 // 发送给指定的客户端
                 if (device.equals(channelKet)) {
                   byte[] openMessage = CRC16.OPEN_DATA_ARRAY[index - 1];
-                  System.out.println("开始发送消息=" + openMessage);
+                  logger.info("开始发送消息=" + openMessage);
                   Utils.channelMap.get(channelKet).writeAndFlush(openMessage).addListener(new ChannelFutureListener() {
                     // 监听发送的结果
                     public void operationComplete(ChannelFuture future) throws Exception {
@@ -110,7 +112,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
                       }
                     }
                   });
-                  System.out.println("发送的消息：" + openMessage);
+                  logger.info("发送的消息：" + openMessage);
                 }
               }
             } else {
@@ -140,7 +142,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
     response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
     response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, buffer.readableBytes());
     channel.writeAndFlush(response);
-    System.out.println("返回结果完成");
+    logger.info("返回结果完成");
   }
 
   @Override

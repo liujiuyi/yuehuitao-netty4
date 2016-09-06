@@ -7,6 +7,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+import org.apache.log4j.Logger;
+
 import com.yuehuitao.netty.device.DeviceServerInitializer;
 import com.yuehuitao.netty.http.HttpServerInitializer;
 
@@ -16,10 +18,10 @@ import com.yuehuitao.netty.http.HttpServerInitializer;
  *
  */
 public class MainStartServer {
-  private static String HOST = "127.0.0.1";
-
+  private static String HOST = "211.149.218.190";
+  private static Logger logger = Logger.getLogger(MainStartServer.class);
   private static int DEVICE_PORT = 3000;
-  private static int HTTP_PORT = 3001;
+  private static int HTTP_PORT = 3002;
 
   public static void main(String[] args) throws Exception {
     new MainStartServer().run();
@@ -43,10 +45,10 @@ public class MainStartServer {
           .childHandler(new HttpServerInitializer());
 
       // 绑定Host,Port，开始接收进来的连接
-      System.out.println("Server 启动了");
+      logger.info("Server 启动了");
       Channel deviceCh = deviceBoot.bind(HOST, DEVICE_PORT).sync().channel();
 
-      System.out.println("HttpServer 启动了");
+      logger.info("HttpServer 启动了");
       Channel htttpCh = httpBoot.bind(HOST, HTTP_PORT).sync().channel();
 
       // 等待服务器 socket 关闭 。
@@ -58,7 +60,7 @@ public class MainStartServer {
 
       httpBossGroup.shutdownGracefully();
       httpWorkerGroup.shutdownGracefully();
-      System.out.println("Server 关闭了");
+      logger.info("Server 关闭了");
     }
   }
 }

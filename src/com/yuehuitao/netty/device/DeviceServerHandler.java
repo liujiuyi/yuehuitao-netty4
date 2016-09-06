@@ -1,5 +1,7 @@
 package com.yuehuitao.netty.device;
 
+import org.apache.log4j.Logger;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -7,17 +9,19 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
 import com.yuehuitao.common.Utils;
+import com.yuehuitao.netty.http.HttpServerHandler;
 
 /**
  * 服务端 处理器
  * 
  */
 public class DeviceServerHandler extends ChannelInboundHandlerAdapter {
+  private static Logger logger = Logger.getLogger(HttpServerHandler.class);
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
     Channel incoming = ctx.channel();
-    System.out.println("[SERVER] - " + incoming.remoteAddress() + " 加入\n");
+    logger.info("[SERVER] - " + incoming.remoteAddress() + " 加入\n");
   }
 
   @Override
@@ -28,7 +32,7 @@ public class DeviceServerHandler extends ChannelInboundHandlerAdapter {
         Utils.channelMap.remove(channelKey);
       }
     }
-    System.out.println("[SERVER] - " + incoming.remoteAddress() + " 离开\n");
+    logger.info("[SERVER] - " + incoming.remoteAddress() + " 离开\n");
   }
 
   @Override
@@ -41,7 +45,7 @@ public class DeviceServerHandler extends ChannelInboundHandlerAdapter {
         char c = (char) in.readByte();
         message += Utils.charToHex(c);
       }
-      System.out.println("收到的16进制码=" + message + "/" + Utils.str2HexStr("yuehuitao"));
+      logger.info("收到的16进制码=" + message + "/" + Utils.str2HexStr("yuehuitao"));
       // DTU设备端包头yuehuitao
       if (message.startsWith(Utils.str2HexStr("yuehuitao"))) {
         message = message.split("20")[0];
@@ -49,7 +53,7 @@ public class DeviceServerHandler extends ChannelInboundHandlerAdapter {
         Utils.channelMap.put(key, ctx.channel());
         // 打印所有的key
         for (String channelKey : Utils.channelMap.keySet()) {
-          System.out.println("已经连接的key= " + channelKey);
+          logger.info("已经连接的key= " + channelKey);
         }
       }
     } finally {
