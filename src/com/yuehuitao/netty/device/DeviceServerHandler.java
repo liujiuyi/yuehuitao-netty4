@@ -16,7 +16,7 @@ import com.yuehuitao.netty.http.HttpServerHandler;
  * 
  */
 public class DeviceServerHandler extends ChannelInboundHandlerAdapter {
-  private static Logger logger = Logger.getLogger(HttpServerHandler.class);
+  private static Logger logger = Logger.getLogger(DeviceServerHandler.class);
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
