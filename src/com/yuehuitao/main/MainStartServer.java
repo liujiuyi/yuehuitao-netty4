@@ -18,10 +18,10 @@ import com.yuehuitao.netty.http.HttpServerInitializer;
  *
  */
 public class MainStartServer {
-  private static String HOST = "211.149.218.190";
+  private static String HOST = "127.0.0.1";
   private static Logger logger = Logger.getLogger(MainStartServer.class);
-  private static int DEVICE_PORT = 3000;
-  private static int HTTP_PORT = 3002;
+  private static int DEVICE_PORT = 3003;
+  private static int HTTP_PORT = 3004;
 
   public static void main(String[] args) throws Exception {
     new MainStartServer().run();

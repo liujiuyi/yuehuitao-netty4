@@ -24,7 +24,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.yuehuitao.common.CRC16;
 import com.yuehuitao.common.Utils;
 
 /**
@@ -53,7 +52,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
       if (uri.getPath().equals("/favicon.ico")) {
         return;
       }
-      // http://127.0.0.1:3001/command.action?action=01&index=12&device=yuehuitao0001&order_id=123131231231
+      // http://211.149.218.190:3004/command.action?action=01&index=12&device=A01611BKK000001
       String path = uri.getPath().substring(uri.getPath().indexOf("/") + 1);
       logger.info("收到的链接=" + path);
       if ("command.action".equals(path)) {
@@ -71,7 +70,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
           index = Integer.valueOf(parame.get("index").get(0));
         }
         if (parame.containsKey("device")) {
-          device = parame.get("device").get(0);
+          device = "ID:" + parame.get("device").get(0);
         }
         if (parame.containsKey("order_id")) {
           order_id = parame.get("order_id").get(0);
@@ -82,54 +81,140 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
         logger.info("device=" + device);
         logger.info("order_id=" + order_id);
 
-        // 检查是否已经是支付过的订单
-        // if (!"system".equals(order_id) && !new
-        // commonDao().getOrderStatus(order_id)) {
-        // return;
-        // }
-        if (!"".equals(action) && index > 0 && !"".equals(device)) {
+        if (!"".equals(action) && !"".equals(device)) {
           // 01 发送开门命令
           if (action.equals("01") && index > 0) {
             if (Utils.channelMap.containsKey(device)) {
               for (String channelKet : Utils.channelMap.keySet()) {
                 // 发送给指定的客户端
                 if (device.equals(channelKet)) {
-                  byte[] openMessage = CRC16.OPEN_DATA_ARRAY[index - 1];
-                  logger.info("开始发送消息=" + openMessage);
-                  Utils.channelMap.get(channelKet).writeAndFlush(openMessage).addListener(new ChannelFutureListener() {
-                    // 监听发送的结果
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                      if (future.isSuccess()) {
-                        StringBuilder buf = new StringBuilder();
-                        buf.append("发送消息开门成功\r\n");
-                        ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
-                        writeResponse(channel, request, buffer);
-                      } else {
-                        StringBuilder buf = new StringBuilder();
-                        buf.append("发送消息开门失败\r\n");
-                        ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
-                        writeResponse(channel, request, buffer);
-                      }
+                  // 左侧补0，补足三位
+                  String str_index = String.valueOf(index);
+                  int strLen = str_index.length();
+                  if (strLen < 3) {
+                    while (strLen < 3) {
+                      StringBuffer sb = new StringBuffer();
+                      sb.append("0").append(str_index);// 左补0
+                      str_index = sb.toString();
+                      strLen = str_index.length();
                     }
-                  });
+                  }
+
+                  String openMessage = "{START,OPEN:" + str_index + ",END}";// 格式{START,OPEN:023,END}
+                  logger.info("开始发送消息=" + openMessage);
+                  Utils.channelMap.get(channelKet).writeAndFlush(openMessage.getBytes())
+                      .addListener(new ChannelFutureListener() {
+                        // 监听发送的结果
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                          if (future.isSuccess()) {
+                            StringBuilder buf = new StringBuilder();
+                            buf.append("发送消息开门成功\r\n");
+                            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                            writeResponse(channel, request, buffer);
+                          } else {
+                            StringBuilder buf = new StringBuilder();
+                            buf.append("发送消息开门失败\r\n");
+                            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                            writeResponse(channel, request, buffer);
+                          }
+                        }
+                      });
                   logger.info("发送的消息：" + openMessage);
                 }
               }
             } else {
               StringBuilder buf = new StringBuilder();
-              buf.append("发送消息开门失败\r\n");
+              buf.append("没有在线的设备\r\n");
+              ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+              writeResponse(channel, request, buffer);
+            }
+          } else if (action.equals("02")) {
+            // 02 检查设备是否在线
+            StringBuilder buf = new StringBuilder();
+            if (Utils.channelMap.containsKey(device)) {
+              buf.append("true");
+            } else {
+              buf.append("false");
+            }
+            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+            writeResponse(channel, request, buffer);
+          } else if (action.equals("03")) {
+            // 03 LED开控制
+            if (Utils.channelMap.containsKey(device)) {
+              for (String channelKet : Utils.channelMap.keySet()) {
+                // 发送给指定的客户端
+                if (device.equals(channelKet)) {
+                  String onMessage = "{START,LED:ON,END}";
+                  logger.info("开始发送消息");
+                  Utils.channelMap.get(channelKet).writeAndFlush(onMessage.getBytes())
+                      .addListener(new ChannelFutureListener() {
+                        // 监听发送的结果
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                          if (future.isSuccess()) {
+                            StringBuilder buf = new StringBuilder();
+                            buf.append("发送LED命令成功\r\n");
+                            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                            writeResponse(channel, request, buffer);
+                          } else {
+                            StringBuilder buf = new StringBuilder();
+                            buf.append("发送LED命令失败\r\n");
+                            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                            writeResponse(channel, request, buffer);
+                          }
+                        }
+                      });
+                  logger.info("发送的消息：" + onMessage);
+                }
+              }
+            } else {
+              StringBuilder buf = new StringBuilder();
+              buf.append("没有在线的设备\r\n");
+              ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+              writeResponse(channel, request, buffer);
+            }
+          } else if (action.equals("04")) {
+            // 04 LED关控制
+            if (Utils.channelMap.containsKey(device)) {
+              for (String channelKet : Utils.channelMap.keySet()) {
+                // 发送给指定的客户端
+                if (device.equals(channelKet)) {
+                  String offMessage = "{START,LED:OFF,END}";
+                  logger.info("开始发送消息");
+                  Utils.channelMap.get(channelKet).writeAndFlush(offMessage.getBytes())
+                      .addListener(new ChannelFutureListener() {
+                        // 监听发送的结果
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                          if (future.isSuccess()) {
+                            StringBuilder buf = new StringBuilder();
+                            buf.append("发送LED命令成功\r\n");
+                            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                            writeResponse(channel, request, buffer);
+                          } else {
+                            StringBuilder buf = new StringBuilder();
+                            buf.append("发送LED命令失败\r\n");
+                            ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+                            writeResponse(channel, request, buffer);
+                          }
+                        }
+                      });
+                  logger.info("发送的消息：" + offMessage);
+                }
+              }
+            } else {
+              StringBuilder buf = new StringBuilder();
+              buf.append("没有在线的设备\r\n");
               ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
               writeResponse(channel, request, buffer);
             }
           } else {
             StringBuilder buf = new StringBuilder();
-            buf.append("发送消息开门失败\r\n");
+            buf.append("错误的命令标识\r\n");
             ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
             writeResponse(channel, request, buffer);
           }
         } else {
           StringBuilder buf = new StringBuilder();
-          buf.append("发送消息开门失败\r\n");
+          buf.append("错误的参数\r\n");
           ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
           writeResponse(channel, request, buffer);
         }
