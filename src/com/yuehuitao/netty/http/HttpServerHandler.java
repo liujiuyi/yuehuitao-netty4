@@ -52,12 +52,12 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
       if (uri.getPath().equals("/favicon.ico")) {
         return;
       }
-      // http://211.149.218.190:3004/command.action?action=01&index=12&device=A01611BKK000001
+      // http://vending.tttalk.org:3004/command.action?action=01&index=12,13,14,15&device=A01611BKK000001
       String path = uri.getPath().substring(uri.getPath().indexOf("/") + 1);
       logger.info("收到的链接=" + path);
       if ("command.action".equals(path)) {
         String action = ""; // 命令类型
-        int index = 0;// 第几个门
+        String index = "";// 第几个门
         String device = "";// 机器标识
         String order_id = "";// 订单id
         // 解析get请求参数
@@ -67,7 +67,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
           action = parame.get("action").get(0);
         }
         if (parame.containsKey("index")) {
-          index = Integer.valueOf(parame.get("index").get(0));
+          index = parame.get("index").get(0);
         }
         if (parame.containsKey("device")) {
           device = "ID:" + parame.get("device").get(0);
@@ -83,24 +83,29 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
         if (!"".equals(action) && !"".equals(device)) {
           // 01 发送开门命令
-          if (action.equals("01") && index > 0) {
+          if (action.equals("01") && !"".equals(index)) {
             if (Utils.channelMap.containsKey(device)) {
               for (String channelKet : Utils.channelMap.keySet()) {
-                // 发送给指定的客户端
+                //发送给指定的客户端
                 if (device.equals(channelKet)) {
                   // 左侧补0，补足三位
-                  String str_index = String.valueOf(index);
-                  int strLen = str_index.length();
-                  if (strLen < 3) {
-                    while (strLen < 3) {
-                      StringBuffer sb = new StringBuffer();
-                      sb.append("0").append(str_index);// 左补0
-                      str_index = sb.toString();
-                      strLen = str_index.length();
+                  String str_index = "";
+                  String[] index_array = index.split(",");
+                  for(String i : index_array){
+                    int strLen = i.length();
+                    if (strLen < 3) {
+                      while (strLen < 3) {
+                        StringBuffer sb = new StringBuffer();
+                        sb.append("0").append(i);// 左补0
+                        i = sb.toString();
+                        strLen = i.length();
+                      }
                     }
+                    str_index += i + ",";
                   }
+                  str_index = str_index.substring(0, str_index.length()-1);
 
-                  String openMessage = "{START,OPEN:" + str_index + ",END}";// 格式{START,OPEN:023,END}
+                  String openMessage = "{START,OPEN:" + str_index + ",END}";// 格式{START,OPEN:023,024,025,END}
                   logger.info("开始发送消息=" + openMessage);
                   Utils.channelMap.get(channelKet).writeAndFlush(openMessage.getBytes())
                       .addListener(new ChannelFutureListener() {

@@ -18,9 +18,9 @@ import com.yuehuitao.netty.http.HttpServerInitializer;
  *
  */
 public class MainStartServer {
-  private static String HOST = "127.0.0.1";
+  private static String HOST = "vending.tttalk.org";
   private static Logger logger = Logger.getLogger(MainStartServer.class);
-  private static int DEVICE_PORT = 3003;
+  private static int DEVICE_PORT = 9527;
   private static int HTTP_PORT = 3004;
 
   public static void main(String[] args) throws Exception {
